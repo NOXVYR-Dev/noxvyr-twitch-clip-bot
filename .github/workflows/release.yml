@@ -1,0 +1,33 @@
+name: Publish bot update
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build Windows updater package
+        shell: bash
+        run: |
+          zip -j noxvyr-twitch-clip-bot-windows.zip bot.py requirements.txt version.json
+          echo "VERSION=$(python -c 'import json; print(json.load(open("version.json"))["version"])')" >> "$GITHUB_ENV"
+
+      - name: Publish a release when the version is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="v${VERSION#v}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Version $TAG is already published; bump version.json for the next bot update."
+            exit 0
+          fi
+          gh release create "$TAG" noxvyr-twitch-clip-bot-windows.zip --title "Noxvyr Clip Bot $TAG" --generate-notes
