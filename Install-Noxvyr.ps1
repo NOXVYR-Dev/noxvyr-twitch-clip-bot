@@ -98,7 +98,14 @@ Get-ChildItem -LiteralPath $Source -Force | Where-Object { $_.Name -notin @('.en
     Copy-Item -LiteralPath $_.FullName -Destination $InstallDir -Recurse -Force
 }
 $EnvFile = Join-Path $InstallDir '.env'
-if (-not (Test-Path -LiteralPath $EnvFile)) { Copy-Item (Join-Path $InstallDir '.env.example') $EnvFile }
+if (-not (Test-Path -LiteralPath $EnvFile)) {
+    $SourceEnvFile = Join-Path $Source '.env'
+    if (Test-Path -LiteralPath $SourceEnvFile) {
+        Copy-Item -LiteralPath $SourceEnvFile -Destination $EnvFile
+    } else {
+        Copy-Item (Join-Path $InstallDir '.env.example') $EnvFile
+    }
+}
 $DbDir = Join-Path $InstallDir 'data'
 New-Item -ItemType Directory -Path $DbDir -Force | Out-Null
 
