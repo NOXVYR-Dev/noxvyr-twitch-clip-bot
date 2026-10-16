@@ -1,0 +1,8 @@
+services:
+  twitch-clip-discord-bot:
+    build: .
+    container_name: twitch-clip-discord-bot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
