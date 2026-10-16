@@ -8,25 +8,89 @@ function Find-PythonLauncher {
     return $null
 }
 
+function Test-Python312([string]$Launcher) {
+    $previousNativePreference = $PSNativeCommandUseErrorActionPreference
+    try {
+        if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+            $PSNativeCommandUseErrorActionPreference = $false
+        }
+        if ($Launcher) {
+            try {
+                & $Launcher -3.12 --version *> $null
+                if ($LASTEXITCODE -eq 0) { return $true }
+            } catch { }
+        }
+        $Python = Get-Command python.exe -ErrorAction SilentlyContinue
+        if ($Python) {
+            try {
+                $VersionOutput = & $Python.Source --version 2>$null
+                return ($LASTEXITCODE -eq 0 -and $VersionOutput -match '^Python 3\.12(\.|$)')
+            } catch { return $false }
+        }
+        return $false
+    } finally {
+        if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+            $PSNativeCommandUseErrorActionPreference = $previousNativePreference
+        }
+    }
+}
+
 $Launcher = Find-PythonLauncher
+if (-not (Test-Python312 $Launcher)) {
+    $InstalledByPythonManager = $false
+    if ($Launcher) {
+        try {
+            $previousNativePreference = $PSNativeCommandUseErrorActionPreference
+            if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+                $PSNativeCommandUseErrorActionPreference = $false
+            }
+            & $Launcher install 3.12 *> $null
+            $InstalledByPythonManager = ($LASTEXITCODE -eq 0) -and (Test-Python312 $Launcher)
+        } catch {
+            $InstalledByPythonManager = $false
+        } finally {
+            if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+                $PSNativeCommandUseErrorActionPreference = $previousNativePreference
+            }
+        }
+    }
+
+    if (-not $InstalledByPythonManager) {
+        $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+        if (-not $winget) {
+            Start-Process 'https://www.python.org/downloads/windows/'
+            throw 'Python 3.12 fehlt und konnte nicht automatisch installiert werden. Installiere Python 3.12 von python.org und starte Install-Noxvyr.cmd erneut.'
+        }
+        & $winget.Source install --exact --id Python.Python.3.12 --scope user --accept-package-agreements --accept-source-agreements --silent
+        if ($LASTEXITCODE -ne 0) { throw 'Python 3.12 konnte über winget nicht installiert werden.' }
+        $UserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $MachinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        $env:Path = "$UserPath;$MachinePath"
+        $Launcher = Find-PythonLauncher
+    }
+}
+
 if ($Launcher) {
-    & $Launcher -3.12 --version *> $null
-    if ($LASTEXITCODE -ne 0) {
-        & $Launcher install 3.12
-        if ($LASTEXITCODE -ne 0) { throw 'Python 3.12 konnte nicht installiert werden. Installiere Python 3.12 von python.org und starte das Setup erneut.' }
+    $LauncherHasPython312 = $false
+    try {
+        $previousNativePreference = $PSNativeCommandUseErrorActionPreference
+        if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+            $PSNativeCommandUseErrorActionPreference = $false
+        }
+        & $Launcher -3.12 --version *> $null
+        $LauncherHasPython312 = ($LASTEXITCODE -eq 0)
+    } catch {
+        $LauncherHasPython312 = $false
+    } finally {
+        if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+            $PSNativeCommandUseErrorActionPreference = $previousNativePreference
+        }
     }
-} else {
-    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
-    if (-not $winget) {
-        Start-Process 'https://www.python.org/downloads/windows/'
-        throw 'Python bzw. der Python-Installationsmanager fehlt. Die offizielle Python-Downloadseite wurde geöffnet. Installiere Python 3.12 und starte Install-Noxvyr.cmd erneut.'
-    }
-    & $winget.Source install --exact --id Python.Python.3.12 --scope user --accept-package-agreements --accept-source-agreements --silent
-    if ($LASTEXITCODE -ne 0) { throw 'Python 3.12 konnte über winget nicht installiert werden.' }
-    $UserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    $MachinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
-    $env:Path = "$UserPath;$MachinePath"
-    $Launcher = Find-PythonLauncher
+    if (-not $LauncherHasPython312) { $Launcher = $null }
+}
+
+if (-not (Test-Python312 $Launcher)) {
+    throw 'Python 3.12 wurde nach der Installation nicht gefunden. Starte den Server neu und führe Install-Noxvyr.cmd erneut aus.'
 }
 
 if (-not (Test-Path -LiteralPath $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null }
