@@ -4,11 +4,13 @@ Ein gemeinsam gehosteter Discord-Bot, den Freunde auf ihren eigenen Discord-Serv
 
 ## Was der Bot macht
 
-- `/clip-setup twitch_channel zielkanal`: richtet den Server ein; nur Personen mit **Server verwalten** dürfen das.
-- `/clip-status`: zeigt die Einrichtung.
-- `/clip-remove`: schaltet Meldungen für den Server aus; ebenfalls nur für Server-Admins.
+- `/clip-setup twitch_channel zielkanal`: richtet den Server ein; nur Personen mit der Discord-Berechtigung **Administrator** dürfen das.
+- `/clip-status`: zeigt die Einrichtung; ebenfalls nur für Administratoren.
+- `/clip-remove`: schaltet Meldungen für den Server aus; ebenfalls nur für Administratoren.
 - Vorhandene Clips werden beim Einrichten übersprungen. Neue Links werden in den eingestellten Kanal gesendet.
 - Die Einrichtung je Discord-Server und bereits veröffentlichte Clips bleiben in SQLite gespeichert.
+
+Die drei Slash-Befehle sind auf jedem Server auf Administratoren beschränkt und nur auf Servern verfügbar. **Server verwalten** oder **Nachrichten verwalten** allein reichen nicht aus. Normale Mitglieder können die veröffentlichten Clips weiterhin sehen, sofern sie Zugriff auf den Zielkanal haben. Die Kanalberechtigungen werden vom Bot nicht verändert.
 
 Der Bot fragt Twitch im Abstand von standardmäßig 60 Sekunden ab und gleicht überlappende Zeitfenster ab. Twitch kann neue Clips mit einer Verzögerung auffindbar machen, daher ist die Zustellung nicht augenblicklich. Der Bot liest keine Chatnachrichten und braucht keinen Twitch-Chat-Zugriff. Er nutzt Twitchs [Get Clips API](https://dev.twitch.tv/docs/api/reference#get-clips).
 
