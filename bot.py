@@ -234,7 +234,7 @@ class ClipBot(commands.Bot):
             clip_url = clip.get("url") or f"https://clips.twitch.tv/{clip_id}"
             try:
                 await channel.send(
-                    f"🎬 **{discord.utils.escape_markdown(title)}** — Clip von **{discord.utils.escape_markdown(creator)}**\n{clip_url}",
+                    f"🎬\u00a0 **{discord.utils.escape_markdown(title)}** — Clip von **{discord.utils.escape_markdown(creator)}**\n{clip_url}",
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
             except (discord.Forbidden, discord.HTTPException):
@@ -262,7 +262,9 @@ bot = ClipBot()
     twitch_channel="Twitch-Name oder Link zum Twitch-Kanal",
     zielkanal="Discord-Kanal, in den neue Clips gepostet werden",
 )
-@app_commands.checks.has_permissions(manage_guild=True)
+@app_commands.guild_only()
+@app_commands.default_permissions(administrator=True)
+@app_commands.checks.has_permissions(administrator=True)
 async def clip_setup(interaction: discord.Interaction, twitch_channel: str,
                      zielkanal: discord.TextChannel) -> None:
     if interaction.guild_id is None or bot.db is None:
@@ -308,6 +310,9 @@ async def clip_setup(interaction: discord.Interaction, twitch_channel: str,
 
 
 @bot.tree.command(name="clip-status", description="Zeigt die Clip-Einrichtung dieses Servers")
+@app_commands.guild_only()
+@app_commands.default_permissions(administrator=True)
+@app_commands.checks.has_permissions(administrator=True)
 async def clip_status(interaction: discord.Interaction) -> None:
     config = bot.db.execute("SELECT * FROM guild_config WHERE guild_id = ?", (str(interaction.guild_id),)).fetchone() if bot.db and interaction.guild_id else None
     if config is None:
@@ -320,7 +325,9 @@ async def clip_status(interaction: discord.Interaction) -> None:
 
 
 @bot.tree.command(name="clip-remove", description="Deaktiviert Clip-Meldungen für diesen Server")
-@app_commands.checks.has_permissions(manage_guild=True)
+@app_commands.guild_only()
+@app_commands.default_permissions(administrator=True)
+@app_commands.checks.has_permissions(administrator=True)
 async def clip_remove(interaction: discord.Interaction) -> None:
     if bot.db is not None and interaction.guild_id is not None:
         bot.db.execute("DELETE FROM guild_config WHERE guild_id = ?", (str(interaction.guild_id),))
@@ -332,7 +339,7 @@ async def clip_remove(interaction: discord.Interaction) -> None:
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
     if isinstance(error, app_commands.MissingPermissions):
-        message = "Diesen Befehl darf nur ein Server-Admin mit der Berechtigung **Server verwalten** nutzen."
+        message = "Diesen Befehl dürfen nur Personen mit der Discord-Berechtigung **Administrator** nutzen."
     else:
         LOG.error("Slash-Befehl fehlgeschlagen: %s", error, exc_info=error)
         message = "Der Befehl ist fehlgeschlagen. Bitte versuche es erneut."
